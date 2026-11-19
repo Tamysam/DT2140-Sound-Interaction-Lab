@@ -10,9 +10,11 @@
 let dspNode = null;
 let dspNodeParams = null;
 let jsonParams = null;
+let prevRotZ = null;
+
 
 // Change here to ("tuono") depending on your wasm file name
-const dspName = "bells";
+const dspName = "door";
 const instance = new FaustWasm2ScriptProcessor(dspName);
 
 // output to window or npm package module
@@ -25,7 +27,7 @@ if (typeof module === "undefined") {
 }
 
 // The name should be the same as the WASM file, so change tuono with brass if you use brass.wasm
-bells.createDSP(audioContext, 1024)
+door.createDSP(audioContext, 1024)
     .then(node => {
         dspNode = node;
         dspNode.connect(audioContext.destination);
@@ -33,6 +35,8 @@ bells.createDSP(audioContext, 1024)
         const jsonString = dspNode.getJSON();
         jsonParams = JSON.parse(jsonString)["ui"][0]["items"];
         dspNodeParams = jsonParams
+        dspNode.setParamValue("/door/volume", 0);
+        
         // const exampleMinMaxParam = findByAddress(dspNodeParams, "/thunder/rumble");
         // // ALWAYS PAY ATTENTION TO MIN AND MAX, ELSE YOU MAY GET REALLY HIGH VOLUMES FROM YOUR SPEAKERS
         // const [exampleMinValue, exampleMaxValue] = getParamMinMax(exampleMinMaxParam);
@@ -55,8 +59,29 @@ function accelerationChange(accx, accy, accz) {
     // playAudio()
 }
 
+
 function rotationChange(rotx, roty, rotz) {
+    if (prevRotZ === null) {
+        prevRotZ = rotz;
+        return;
+    }
+
+    
+    let deltaZ = rotz - prevRotZ;
+    if (deltaZ > 180) deltaZ -= 360;
+    if (deltaZ < -180) deltaZ += 360;
+    prevRotZ = rotz;
+
+    let spinSpeed = abs(deltaZ);
+
+    if (spinSpeed > 1.5) {
+        let doorPos = constrain(map(spinSpeed, 1.5, 25, 0.05, 0.5), 0, 0.5);
+        playAudio(doorPos, 0.8);
+    } else {
+        playAudio(0, 0);
+    }
 }
+
 
 function mousePressed() {
     // playAudio()
@@ -74,7 +99,7 @@ function deviceTurned() {
 function deviceShaken() {
     shaketimer = millis();
     statusLabels[0].style("color", "pink");
-    playAudio();
+    
 }
 
 function getMinMaxParam(address) {
@@ -95,15 +120,15 @@ function getMinMaxParam(address) {
 //
 //==========================================================================================
 
-function playAudio() {
+function playAudio(position, volume) {
     if (!dspNode) {
         return;
     }
     if (audioContext.state === 'suspended') {
         return;
     }
-    dspNode.setParamValue("/englishBell/gate", 1)
-    setTimeout(() => { dspNode.setParamValue("/englishBell/gate", 0) }, 100);
+    dspNode.setParamValue("/door/door/position", position);
+    dspNode.setParamValue("/door/volume", volume);
 }
 
 //==========================================================================================
