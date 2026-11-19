@@ -56,6 +56,14 @@ function accelerationChange(accx, accy, accz) {
 }
 
 function rotationChange(rotx, roty, rotz) {
+    // 10° to 60° maps to air pressure 0 to 0.9
+    let tilt = constrain(abs(roty), 0, 60);
+    if (tilt > 10) {
+        let pressure = map(tilt, 10, 60, 0.2, 0.9);
+        playAudio(pressure);
+    } else {
+        playAudio(0);
+    }
 }
 
 function mousePressed() {
@@ -74,7 +82,7 @@ function deviceTurned() {
 function deviceShaken() {
     shaketimer = millis();
     statusLabels[0].style("color", "pink");
-    playAudio();
+    
 }
 
 function getMinMaxParam(address) {
